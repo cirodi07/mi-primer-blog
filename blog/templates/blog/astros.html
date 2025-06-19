@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>astrology</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Audiowide&family=Exo+2:ital,wght@0,100..900;1,100..900&family=Orbitron:wght@400..900&family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap"
+    rel="stylesheet">
+  <!-- font
+    Orbitron
+    Rajdhani
+    audiowide
+    share tech mono (x)
+    exo 2
+  -->
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    .astros {
+      width: 400px;
+      height: 400px;
+      transition: transform 0.8s;
+      color: white;
+    }
+
+    .astros:hover {
+      transform: scale(1.5);
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+      min-height: 100vh;
+      flex-wrap: wrap;
+      background-image: url("/static/img/fondo.png");
+      background-attachment: fixed;
+    }
+
+    main {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+      min-height: 100vh;
+      padding-top: 80px;
+    }
+
+    .div_princ {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 90vw;
+      height: 90vh;
+      position: relative;
+      margin-top: 10px;
+    }
+
+    .astro_nombre {
+      position: absolute;
+      top: 0px;
+      color: white;
+      font-weight: 500;
+      font-family: "Orbitron", sans-serif;
+      font-size: 40px;
+      visibility: hidden;
+      text-shadow: 0 0 4px #ff0000;
+    }
+
+    .astro_datos {
+      position: absolute;
+      left: 0px;
+      width: 20vw;
+      color: white;
+      visibility: hidden;
+      font-family: "exo 2", sans-serif;
+      font-size: 19px;
+      text-shadow: 0 0 4px #ff0000;
+    }
+
+    .astro_datos2 {
+      position: absolute;
+      right: 0px;
+      width: 20vw;
+      color: white;
+      visibility: hidden;
+      font-family: "exo 2", sans-serif;
+      font-size: 19px;
+      text-shadow: 0 0 4px #ff0000;
+    }
+
+    .afectado {
+      opacity: 0;
+      transition: all 0.8s;
+    }
+
+    .astros:hover ~ .afectado {
+      visibility: visible;
+      opacity: 1;
+    }
+  </style>
+</head>
+
+<body>
+  <main>
+    {% for astro in astros %}
+    <div class="div_princ">
+      <div id="{{ astro.nombre|slugify }}" class="astros"></div> <!--slugify: cambiar espacios por guiones-->
+      <p class="astro_nombre afectado">{{ astro.nombre }}</p>
+      <div class="astro_datos afectado">
+        <p>Diametro: {{ astro.diametro }} Km</p>
+        <br>
+        <p>Masa: {{ astro.masa }} Kg</p>
+        <br>
+        <p>Distancia al sol: {{ astro.distancia_sol }} millones de Km</p>
+        <br>
+        <p>Un dia dura: {{ astro.periodo_dias }} dias terrestres</p>
+        <br>
+        <p>Un año dura: {{ astro.periodo_años }} dias terrestres</p>
+        <br>
+        <p>Lunas: {{ astro.lunas }}</p>
+      </div>
+      <div class="astro_datos2 afectado">
+        <p>{{ astro.descripcion|linebreaksbr }}</p>
+      </div>
+    </div>
+    {% with escala_id="escala-"|add:astro.nombre|slugify %} <!--add: unir cadenas de texto (escala-venus)-->
+    {{ astro.escala|json_script:escala_id }} <!--json_script: convertir un diccionario en json-->
+    {% endwith %}
+
+    {% with rotacion_id="rotacion-"|add:astro.nombre|slugify %}
+    {{ astro.rotacion|json_script:rotacion_id }}
+    {% endwith %}
+    <script type="module">
+      import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.module.js';
+      const container = document.getElementById('{{ astro.nombre|slugify }}');
+      const escala = JSON.parse(document.getElementById('escala-{{ astro.nombre|slugify }}').textContent);
+      const rotacion = JSON.parse(document.getElementById('rotacion-{{ astro.nombre|slugify }}').textContent);
+      const scene = new THREE.Scene(); // contenedor de las escenas 3D
+      const camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000); //camara de perspectiva
+      const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true }); //dibuja la escena y suaviza bordes y transparente
+      renderer.setSize(container.clientWidth, container.clientHeight); // tamaño de pantalla completa
+
+      container.appendChild(renderer.domElement); //cuerpo de la pagina dentro del div
+
+      const geometry = new THREE.SphereGeometry(escala, 64, 64); //crear esfera radio 3
+      const textureLoader = new THREE.TextureLoader(); //una textura para cargar imagenes
+      const texture = textureLoader.load('{{ astro.imagen.url }}'); // se carga la imagen
+      const material = new THREE.MeshBasicMaterial({ map: texture }); //aplica la textura
+      const sphere = new THREE.Mesh(geometry, material); //se renderiza
+      sphere.rotation.z = rotacion;
+      scene.add(sphere); //se agrega a la escena
+
+      let targetZ = 5;
+      camera.position.z = targetZ; // posición inicial de la camara
+
+      container.addEventListener("mouseenter", () => {
+        targetZ = escala * 1.7; //cuando pasa el mouse aumenta el zoom
+      });
+
+      container.addEventListener("mouseleave", () => {
+        targetZ = 5; //cuando sale el mouse regresa a la posicion inicial
+      });
+
+      function animate() {
+        requestAnimationFrame(animate); //loop de animacion
+        sphere.rotation.y += 0.0015; //rota la esfera
+        camera.position.z += (targetZ - camera.position.z) * 0.09; // efecto suave del zoom
+        renderer.render(scene, camera); //se renderiza
+      }
+      animate();
+    </script>
+    {% endfor %}
+  </main>
+</body>
+
+</html>

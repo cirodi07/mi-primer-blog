@@ -15,8 +15,12 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.conf import settings #usar configuracion del proyecto
+from django.conf.urls.static import static # importa static para agregar urls para mostrar imagenes
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('blog.urls')),
 ]
+
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT) #arma las urls para mostrar imagenes
