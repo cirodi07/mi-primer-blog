@@ -43,7 +43,7 @@
       width: 100%;
       min-height: 100vh;
       flex-wrap: wrap;
-      background-image: url("/static/img/fondo.png");
+      background-image: url("../../media/img/fondo.png");
       background-attachment: fixed;
     }
 
@@ -105,7 +105,7 @@
       transition: all 0.8s;
     }
 
-    .astros:hover ~ .afectado {
+    .astros:hover~.afectado {
       visibility: visible;
       opacity: 1;
     }
@@ -144,26 +144,52 @@
     {% endwith %}
     <script type="module">
       import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.module.js';
+
       const container = document.getElementById('{{ astro.nombre|slugify }}');
       const escala = JSON.parse(document.getElementById('escala-{{ astro.nombre|slugify }}').textContent);
       const rotacion = JSON.parse(document.getElementById('rotacion-{{ astro.nombre|slugify }}').textContent);
-      const scene = new THREE.Scene(); // contenedor de las escenas 3D
-      const camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000); //camara de perspectiva
-      const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true }); //dibuja la escena y suaviza bordes y transparente
-      renderer.setSize(container.clientWidth, container.clientHeight); // tamaño de pantalla completa
 
+      const scene = new THREE.Scene(); // contenedor de las escenas 3D
+
+      const camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000); //camara de perspectiva
+      camera.position.z = 5;
+
+      const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });  //dibuja la escena y suaviza bordes y transparente
+      renderer.setSize(container.clientWidth, container.clientHeight); //tamaño
+      renderer.shadowMap.enabled = true; //proyectar y recibir sombras
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap; //suaviza sombras
       container.appendChild(renderer.domElement); //cuerpo de la pagina dentro del div
 
-      const geometry = new THREE.SphereGeometry(escala, 64, 64); //crear esfera radio 3
+      // Luz direccional para generar sombras
+      const directionalLight = new THREE.DirectionalLight(0xffffff, 1.2); //color - brillo
+      directionalLight.position.set(8, 5, 5); //ilumina desde una posicion x-y-z
+      directionalLight.castShadow = true; //sombras
+      scene.add(directionalLight); //se agrega a la escena
+
+      // Luz ambiental suave
+      const ambientLight = new THREE.AmbientLight(0x404040, 0.7); //suaviza iluminacion 
+      scene.add(ambientLight); //se agrega a la escena
+
+      // Cargar textura del planeta
       const textureLoader = new THREE.TextureLoader(); //una textura para cargar imagenes
       const texture = textureLoader.load('{{ astro.imagen.url }}'); // se carga la imagen
-      const material = new THREE.MeshBasicMaterial({ map: texture }); //aplica la textura
+
+      // Material realista con reflejos y sombreado
+      const material = new THREE.MeshStandardMaterial({
+        map: texture,
+        roughness: 0.8, //que tan rugoso es
+        metalness: 0.3 //que tan metalico es
+      }); //aplica la textura
+
+      // Crear esfera del planeta
+      const geometry = new THREE.SphereGeometry(escala, 64, 64); //crear esfera radio 3
       const sphere = new THREE.Mesh(geometry, material); //se renderiza
       sphere.rotation.z = rotacion;
+      sphere.castShadow = true; //sombras en los planetas
+      sphere.receiveShadow = true;
       scene.add(sphere); //se agrega a la escena
 
-      let targetZ = 5;
-      camera.position.z = targetZ; // posición inicial de la camara
+      let targetZ = 5; // posición inicial de la camara
 
       container.addEventListener("mouseenter", () => {
         targetZ = escala * 1.7; //cuando pasa el mouse aumenta el zoom
@@ -181,6 +207,7 @@
       }
       animate();
     </script>
+
     {% endfor %}
   </main>
 </body>
